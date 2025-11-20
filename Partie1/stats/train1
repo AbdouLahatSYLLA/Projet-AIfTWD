@@ -1,0 +1,37 @@
+/usr/local/bin/python3.9 /Users/abdous/Desktop/UPB-ERASMUS-DD/AI for Trust-worthy Decisions/Project/projet_AIFTWDM/Projet-AIfTWD/Partie1/code/main_centralized.py
+DataFrame Maître créé. Nombre total d'images: 3568
+Distribution des étiquettes:
+target
+0    2111
+1    1457
+Name: count, dtype: int64
+Patients Malignant Dominant: 710
+Patients Benign Dominant: 856
+
+--- Vérification de la Distribution Non-IID ---
+
+Client: client1
+Total images: 1622
+Distribution Malignant (1): 61.22%
+
+Client: client2
+Total images: 1187
+Distribution Malignant (1): 13.48%
+
+Client: client3
+Total images: 759
+Distribution Malignant (1): 40.05%
+--- Démarrage de la Baseline Centralisée ---
+Entraînement sur : cpu
+/usr/local/lib/python3.9/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/usr/local/lib/python3.9/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Entraînement sur 2854 images. Test sur 714 images.
+Epoch 1: Loss 0.6742 | Acc: 61.67%
+Epoch 2: Loss 0.6410 | Acc: 63.38%
+Epoch 3: Loss 0.5951 | Acc: 65.56%
+Epoch 4: Loss 0.5842 | Acc: 66.26%
+Epoch 5: Loss 0.5693 | Acc: 68.26%
+Évaluation du modèle final...
+RESULTAT BASELINE CENTRALISÉE -> Accuracy: 68.77%

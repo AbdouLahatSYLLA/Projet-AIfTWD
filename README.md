@@ -1,12 +1,11 @@
 # Projet-AIfTWD
 Implementation of a functional minimal federated setup on Cancer Identification using medical imaging data 
 
-dataset BreaKHis_v1 need to be downloaded and added to the folder "Partie1/dataset/" next to the csv files
+dataset Images need to be downloaded and added to the folder "Partie1/dataset/" next to the csv files
 
 link to download the dataset : https://www.kaggle.com/datasets/awsaf49/cbis-ddsm-breast-cancer-image-dataset?resource=download
 
 first results :
-
 ```text
 <class 'pandas.core.frame.DataFrame'>
 RangeIndex: 3568 entries, 0 to 3567
@@ -58,3 +57,34 @@ Distribution Malignant (1): 40.05%
 
 Process finished with exit code 0
 ```
+
+# Baseline Centralised
+````bash 
+# lancer le server
+ python3 Partie1/code/main_centralized.py
+````
+
+# Federated learning
+
+## terminal 1
+````bash 
+# lancer le server
+ python3 Partie1/code/server_flower.py
+````
+
+## terminal 2
+````bash 
+# lancer le server
+ python3 Partie1/code/client_flower.py --cid client1 --server 127.0.0.1:8080
+````
+
+## terminal 3
+````bash
+python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080
+````
+
+## terminal 4
+
+````bash
+python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080
+````

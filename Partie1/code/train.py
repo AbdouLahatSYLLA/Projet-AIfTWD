@@ -20,7 +20,7 @@ def train(net, trainloader, epochs=1, device='cpu'):
             images, labels = images.to(device), labels.to(device)
 
             # Zero the parameter gradients
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
             # Forward pass
             outputs = net(images)

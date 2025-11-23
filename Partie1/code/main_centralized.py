@@ -54,7 +54,7 @@ def run_centralized_baseline():
 
     # Start Training
     print(f"Training on {len(train_set)} images. Testing on {len(test_set)} images.")
-    train(model, train_loader, epochs=5, device=device)
+    train(model, train_loader, epochs=40, device=device)
 
     # Final Evaluation
     print("Evaluating final model...")

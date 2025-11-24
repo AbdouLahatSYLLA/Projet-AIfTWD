@@ -44,7 +44,7 @@ def run_centralized_baseline(run_id,epochs):
         device = torch.device("cpu")
 
     full_dataset = CBISDataset(df_combined, transform=data_transforms)
-    train_size = int(0.8 * len(full_dataset))
+    train_size = int(0.7 * len(full_dataset))
     test_size = len(full_dataset) - train_size
     train_set, test_set = random_split(full_dataset, [train_size, test_size],
                                        generator=torch.Generator().manual_seed(42))

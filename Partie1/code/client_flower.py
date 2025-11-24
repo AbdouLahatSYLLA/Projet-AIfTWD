@@ -31,10 +31,11 @@ def _save_stats(stats, log_dir, filename):
 
 
 class CBISClient(fl.client.NumPyClient):
-    def __init__(self, client_id, device, log_dir):
+    def __init__(self, client_id, device, log_dir, epochs):
         self.client_id = client_id
         self.device = device
         self.log_dir = log_dir
+        self.epochs = epochs
         self.stats_filename = f"stats_{self.client_id}.pkl"
 
         # Clean up on startup
@@ -76,7 +77,7 @@ class CBISClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         train_loader = DataLoader(self.train_set, batch_size=32, shuffle=True)
 
-        history = train(self.model, train_loader, epochs=1, device=self.device)
+        history = train(self.model, train_loader, epochs=self.epochs, device=self.device)
 
         # Save with correct round number (important for plotting)
         for stat in history:
@@ -100,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument('--cid', type=str, required=True, help='Client ID: client{1,2,3}')
     parser.add_argument('--server', type=str, default="127.0.0.1:8080", help='Server address')
     parser.add_argument("--run_id", type=str, required=True, help="Run ID (ex: 0)")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of local epochs per round")
     args = parser.parse_args()
 
     if torch.cuda.is_available():
@@ -116,5 +118,5 @@ if __name__ == "__main__":
 
     print(f"Starting Client {args.cid} on {device} (Logs: {log_dir})")
 
-    client = CBISClient(args.cid, device, log_dir)
+    client = CBISClient(args.cid, device, log_dir, epochs=args.epochs)
     fl.client.start_numpy_client(server_address=args.server, client=client, grpc_max_message_length=1024 * 1024 * 1024)

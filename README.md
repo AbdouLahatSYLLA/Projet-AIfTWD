@@ -96,3 +96,7 @@ python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080
 python3 Partie1/analysis/plot_result.py --files Partie1/logs/federated/clients/1/{stats_client1.pkl,stats_client2.pkl,stats_client3.pkl}  --metric both
 ````
  
+Pour la moyenne des runs et peur prendre plus d'arguments par exemple :  python3 Partie1/analysis/plot_result.py --logdir Partie1/logs/federated Partie1/logs/centralized etc --metric accuracy
+````bash
+python3 Partie1/analysis/plot_result.py --logdir Partie1/logs/federated --metric accuracy
+````

@@ -54,7 +54,7 @@ def main():
 
     history = fl.server.start_server(
         server_address="0.0.0.0:8080",
-        config=fl.server.ServerConfig(num_rounds=2),
+        config=fl.server.ServerConfig(num_rounds=25),
         grpc_max_message_length=1024 * 1024 * 1024,
         strategy=strategy
     )

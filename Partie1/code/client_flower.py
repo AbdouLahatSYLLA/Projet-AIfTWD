@@ -118,5 +118,5 @@ if __name__ == "__main__":
 
     print(f"Starting Client {args.cid} on {device} (Logs: {log_dir})")
 
-    client = CBISClient(args.cid, device, log_dir)
+    client = CBISClient(args.cid, device, log_dir, epochs=args.epochs)
     fl.client.start_numpy_client(server_address=args.server, client=client, grpc_max_message_length=1024 * 1024 * 1024)

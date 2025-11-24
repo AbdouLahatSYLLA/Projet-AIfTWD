@@ -11,6 +11,9 @@ def train(net, trainloader, epochs=1, device='cpu'):
     net.train()
     net.to(device)
 
+    # List to store history for saving
+    history = []
+
     for epoch in range(epochs):
         running_loss = 0.0
         correct = 0
@@ -39,7 +42,15 @@ def train(net, trainloader, epochs=1, device='cpu'):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-        print(f"Epoch {epoch + 1}: Loss {running_loss / len(trainloader):.4f} | Acc: {100 * correct / total:.2f}%")
+        epoch_loss = running_loss / len(trainloader)
+        epoch_acc = 100 * correct / total
+
+        print(f"Epoch {epoch + 1}: Loss {epoch_loss:.4f} | Acc: {epoch_acc:.2f}%")
+
+        # Add current epoch stats
+        history.append({"epoch": epoch + 1, "loss": epoch_loss, "accuracy": epoch_acc})
+
+    return history
 
 
 def test(net, testloader, device='cpu'):

@@ -88,3 +88,11 @@ python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080
 ````bash
 python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080
 ````
+
+
+# Generation de Graphe pour analyse
+
+````bash
+python3 Partie1/analysis/plot_result.py --files Partie1/logs/federated/clients/1/{stats_client1.pkl,stats_client2.pkl,stats_client3.pkl}  --metric both
+````
+ 

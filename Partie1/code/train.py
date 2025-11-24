@@ -5,7 +5,7 @@ import torch
 def train(net, trainloader, epochs=1, device='cpu'):
     """Train the network on the training set."""
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(net.parameters(), lr=0.0001)
 
     # Set model to training mode
     net.train()

@@ -57,7 +57,7 @@ def run_centralized_baseline(run_id,epochs):
     # Start training
     history = train(model, train_loader, epochs=epochs, device=device)
 
-    print("Saving training stats...")
+    print("Saving training stats..." + log_dir)
     for stat in history:
         _save_stats(stat, log_dir)
 

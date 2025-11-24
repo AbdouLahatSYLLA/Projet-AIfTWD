@@ -29,6 +29,7 @@ def _save_stats(stats, log_dir):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_id", type=str, required=True, help="Run ID (ex: 0)")
+    parser.add_argument("--rounds", type=int, default=3, help="Number of federated rounds")
     args = parser.parse_args()
 
     # Create logs directory: Partie1/logs/federated/{id}/
@@ -40,7 +41,7 @@ def main():
     if os.path.exists(os.path.join(log_dir, "server_stats.pkl")):
         os.remove(os.path.join(log_dir, "server_stats.pkl"))
 
-    print(f"Starting Flower Server (Waiting for {NUM_CLIENTS} clients)...")
+    print(f"Starting Flower Server (Waiting for {NUM_CLIENTS} clients) for {args.rounds} rounds...")
 
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=1.0,
@@ -54,7 +55,7 @@ def main():
 
     history = fl.server.start_server(
         server_address="0.0.0.0:8080",
-        config=fl.server.ServerConfig(num_rounds=2),
+        config=fl.server.ServerConfig(num_rounds=args.rounds),
         grpc_max_message_length=1024 * 1024 * 1024,
         strategy=strategy
     )

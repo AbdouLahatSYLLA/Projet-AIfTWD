@@ -62,7 +62,7 @@ Process finished with exit code 0
 
 ````bash 
 # lancer le server
- python3 Partie1/code/main_centralized.py --run_id 0
+ python3 Partie1/code/main_centralized.py --run_id 0 --epochs 20
 ````
 
 # Federated learning
@@ -70,24 +70,24 @@ Process finished with exit code 0
 ## terminal 1
 ````bash 
 # lancer le server
- python3 Partie1/code/server_flower.py --run_id 0
+ python3 Partie1/code/server_flower.py --run_id 0 --rounds 15
 ````
 
 ## terminal 2
 ````bash 
 # lancer le server
- python3 Partie1/code/client_flower.py --cid client1 --server 127.0.0.1:8080 --run_id 0
+ python3 Partie1/code/client_flower.py --cid client1 --server 127.0.0.1:8080 --run_id 0 --epochs 3
 ````
 
 ## terminal 3
 ````bash
-python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080 --run_id 0
+python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080 --run_id 0 --epochs 3
 ````
 
 ## terminal 4
 
 ````bash
-python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080 --run_id 0
+python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080 --run_id 0 --epochs 3
 ````
 
 

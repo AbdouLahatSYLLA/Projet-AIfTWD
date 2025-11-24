@@ -25,7 +25,7 @@ def _save_stats(stats, log_dir):
         pickle.dump(stats, f)
 
 
-def run_centralized_baseline(run_id):
+def run_centralized_baseline(run_id,epochs):
     print(f"--- Starting Centralized Baseline (Run {run_id}) ---")
 
     # Create logs directory: Partie1/logs/centralized/{id}/
@@ -55,7 +55,7 @@ def run_centralized_baseline(run_id):
     model = get_model()
 
     # Start training
-    history = train(model, train_loader, epochs=20, device=device)
+    history = train(model, train_loader, epochs=epochs, device=device)
 
     print("Saving training stats...")
     for stat in history:
@@ -72,6 +72,7 @@ def run_centralized_baseline(run_id):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_id", type=str, default="0", help="Run ID")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of local epochs per round")
     args = parser.parse_args()
 
-    run_centralized_baseline(args.run_id)
+    run_centralized_baseline(args.run_id,args.epochs)

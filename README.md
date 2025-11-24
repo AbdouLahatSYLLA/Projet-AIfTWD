@@ -57,37 +57,37 @@ Distribution Malignant (1): 40.05%
 
 Process finished with exit code 0
 ```
-
+#### NB :  "--run_id n" : est le n-eme run. Il est utilisé pour gerer l'emplacement de sauvegarde des logs (stats)
 # Baseline Centralised
+
 ````bash 
 # lancer le server
  python3 Partie1/code/main_centralized.py --run_id 0
 ````
-Le --run_id  est le numero d'entrainementutilisé pour faciliter la sauvegarde de logs
 
 # Federated learning
 
 ## terminal 1
 ````bash 
 # lancer le server
- python3 Partie1/code/server_flower.py
+ python3 Partie1/code/server_flower.py --run_id 0
 ````
 
 ## terminal 2
 ````bash 
 # lancer le server
- python3 Partie1/code/client_flower.py --cid client1 --server 127.0.0.1:8080
+ python3 Partie1/code/client_flower.py --cid client1 --server 127.0.0.1:8080 --run_id 0
 ````
 
 ## terminal 3
 ````bash
-python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080
+python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080 --run_id 0
 ````
 
 ## terminal 4
 
 ````bash
-python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080
+python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080 --run_id 0
 ````
 
 

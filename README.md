@@ -61,8 +61,9 @@ Process finished with exit code 0
 # Baseline Centralised
 ````bash 
 # lancer le server
- python3 Partie1/code/main_centralized.py
+ python3 Partie1/code/main_centralized.py --run_id 0
 ````
+Le --run_id  est le numero d'entrainementutilisé pour faciliter la sauvegarde de logs
 
 # Federated learning
 

@@ -9,7 +9,7 @@ def run_centralized():
     # 2. Train
     results = model.train(
         data='dataset_yolo',
-        epochs=5,
+        epochs=25,
         imgsz=224,
         project='logs_yolo',
         name='centralized_run'

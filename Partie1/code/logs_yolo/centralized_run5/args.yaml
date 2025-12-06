@@ -1,10 +1,10 @@
 task: classify
 mode: train
-model: yolov8n-cls.pt
+model: yolov8s-cls.pt
 data: dataset_yolo
-epochs: 100
+epochs: 150
 time: null
-patience: 100
+patience: 15
 batch: 16
 imgsz: 224
 save: true
@@ -13,7 +13,7 @@ cache: false
 device: cpu
 workers: 8
 project: logs_yolo
-name: centralized_run4
+name: centralized_run5
 exist_ok: false
 pretrained: true
 optimizer: auto
@@ -103,4 +103,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: /Users/abdous/Desktop/UPB-ERASMUS-DD/AI for Trust-worthy Decisions/Project/projet_AIFTWDM/Projet-AIfTWD/Partie1/code/logs_yolo/centralized_run4
+save_dir: /Users/abdous/Desktop/UPB-ERASMUS-DD/AI for Trust-worthy Decisions/Project/projet_AIFTWDM/Projet-AIfTWD/Partie1/code/logs_yolo/centralized_run5

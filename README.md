@@ -1,12 +1,11 @@
 # Projet-AIfTWD
 Implementation of a functional minimal federated setup on Cancer Identification using medical imaging data 
 
-dataset BreaKHis_v1 need to be downloaded and added to the folder "Partie1/dataset/" next to the csv files
+dataset Images need to be downloaded and added to the folder "Partie1/dataset/" next to the csv files
 
 link to download the dataset : https://www.kaggle.com/datasets/awsaf49/cbis-ddsm-breast-cancer-image-dataset?resource=download
 
 first results :
-
 ```text
 <class 'pandas.core.frame.DataFrame'>
 RangeIndex: 3568 entries, 0 to 3567
@@ -58,3 +57,47 @@ Distribution Malignant (1): 40.05%
 
 Process finished with exit code 0
 ```
+#### NB :  "--run_id n" : est le n-eme run. Il est utilisé pour gerer l'emplacement de sauvegarde des logs (stats)
+# Baseline Centralised
+
+````bash 
+# lancer le server
+ python3 Partie1/code/main_centralized.py --run_id 0 --epochs 20
+````
+
+# Federated learning
+
+## terminal 1
+````bash 
+# lancer le server
+ python3 Partie1/code/server_flower.py --run_id 0 --rounds 15
+````
+
+## terminal 2
+````bash 
+# lancer le server
+ python3 Partie1/code/client_flower.py --cid client1 --server 127.0.0.1:8080 --run_id 0 --epochs 3
+````
+
+## terminal 3
+````bash
+python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080 --run_id 0 --epochs 3
+````
+
+## terminal 4
+
+````bash
+python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080 --run_id 0 --epochs 3
+````
+
+
+# Generation de Graphe pour analyse
+
+````bash
+python3 Partie1/analysis/plot_result.py --files Partie1/logs/federated/clients/1/{stats_client1.pkl,stats_client2.pkl,stats_client3.pkl}  --metric both
+````
+ 
+Pour la moyenne des runs et peur prendre plus d'arguments par exemple :  python3 Partie1/analysis/plot_result.py --logdir Partie1/logs/federated Partie1/logs/centralized etc --metric accuracy
+````bash
+python3 Partie1/analysis/plot_result.py --logdir Partie1/logs/federated --metric accuracy
+````

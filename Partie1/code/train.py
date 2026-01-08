@@ -5,11 +5,14 @@ import torch
 def train(net, trainloader, epochs=1, device='cpu'):
     """Train the network on the training set."""
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(net.parameters(), lr=0.0001)
 
     # Set model to training mode
     net.train()
     net.to(device)
+
+    # List to store history for saving
+    history = []
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -20,7 +23,7 @@ def train(net, trainloader, epochs=1, device='cpu'):
             images, labels = images.to(device), labels.to(device)
 
             # Zero the parameter gradients
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
             # Forward pass
             outputs = net(images)
@@ -39,7 +42,15 @@ def train(net, trainloader, epochs=1, device='cpu'):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-        print(f"Epoch {epoch + 1}: Loss {running_loss / len(trainloader):.4f} | Acc: {100 * correct / total:.2f}%")
+        epoch_loss = running_loss / len(trainloader)
+        epoch_acc = 100 * correct / total
+
+        print(f"Epoch {epoch + 1}: Loss {epoch_loss:.4f} | Acc: {epoch_acc:.2f}%")
+
+        # Add current epoch stats
+        history.append({"epoch": epoch + 1, "loss": epoch_loss, "accuracy": epoch_acc})
+
+    return history
 
 
 def test(net, testloader, device='cpu'):

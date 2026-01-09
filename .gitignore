@@ -5,6 +5,7 @@ __pycache__/
 
 #the dataset due to high volume
 Partie1/dataset/images
+Partie1/dataset/jpeg.zip
 
 # C extensions
 *.so

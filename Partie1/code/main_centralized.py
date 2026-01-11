@@ -10,7 +10,7 @@ parent_dir = os.path.abspath(os.path.join(current_dir, '..'))
 sys.path.append(parent_dir)
 
 try:
-    from pre_train import df_combined
+    from pre_train import CBISDDSMDataPrep
 except ImportError as e:
     sys.exit(1)
 
@@ -43,7 +43,10 @@ def run_centralized_baseline(run_id,epochs):
     else:
         device = torch.device("cpu")
 
-    full_dataset = CBISDataset(df_combined, transform=data_transforms)
+    dataset = CBISDDSMDataPrep(dataset_dir='dataset', n_clients=3, non_iid=True, class_ratio_per_client=[[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]])
+    full_df = dataset.df_combined_train
+
+    full_dataset = CBISDataset(full_df, transform=data_transforms)
     train_size = int(0.7 * len(full_dataset))
     test_size = len(full_dataset) - train_size
     train_set, test_set = random_split(full_dataset, [train_size, test_size],

@@ -19,7 +19,7 @@ class CBISDDSMDataPrep:
             val_ratio=0.15,
             seed=42
         ) :
-        self.DATASET_DIR = os.path.join(CURRENT_DIR, '..', dataset_dir)
+        self.DATASET_DIR = os.path.join(CURRENT_DIR, dataset_dir)
         self.JPEG_DIR = os.path.join(self.DATASET_DIR, 'images')
 
         self.appelation = {
@@ -71,13 +71,13 @@ class CBISDDSMDataPrep:
         self.df_combined_train = pd.concat([self.df_mass_train, self.df_calc_train], ignore_index=True)
         self.df_combined_train['real_path'] = self.df_combined_train['image file path'].apply(self.get_real_path)
         self.df_combined_train = self.df_combined_train.dropna(subset=['real_path'])
-        self.df_combined_train['image file path'] = self.df_combined_train['real_path']
+        self.df_combined_train['local_path'] = self.df_combined_train['real_path']
 
         self.df_combined_train['target'] = self.df_combined_train['pathology'].apply(
             lambda x: 1 if 'MALIGNANT' in str(x).upper() else 0
         )
 
-        self.df_combined_train = self.df_combined_train[['patient_id', 'image file path', 'target']]
+        self.df_combined_train = self.df_combined_train[['patient_id', 'local_path', 'target']]
 
     def extract_test(self):
         self.df_mass_test = pd.read_csv(os.path.join(self.DATASET_DIR, self.test_csvs[0]))
@@ -86,13 +86,13 @@ class CBISDDSMDataPrep:
         self.df_combined_test = pd.concat([self.df_mass_test, self.df_calc_test], ignore_index=True)
         self.df_combined_test['real_path'] = self.df_combined_test['image file path'].apply(self.get_real_path)
         self.df_combined_test = self.df_combined_test.dropna(subset=['real_path'])
-        self.df_combined_test['image file path'] = self.df_combined_test['real_path']
+        self.df_combined_test['local_path'] = self.df_combined_test['real_path']
 
         self.df_combined_test['target'] = self.df_combined_test['pathology'].apply(
             lambda x: 1 if 'MALIGNANT' in str(x).upper() else 0
         )
 
-        self.df_combined_test = self.df_combined_test[['patient_id', 'image file path', 'target']]
+        self.df_combined_test = self.df_combined_test[['patient_id', 'local_path', 'target']]
 
     def split_by_clients_with_ratio(self, mode="balanced", client_type="train"):
         """
@@ -131,8 +131,6 @@ class CBISDDSMDataPrep:
         else:
             raise ValueError("client_type must be 'train' or 'test'")
 
-        print(patient_stats)
-
         patient_stats['dominant_class'] = patient_stats['target'].round().astype(int)
 
         class0_patients = patient_stats[
@@ -143,7 +141,6 @@ class CBISDDSMDataPrep:
             patient_stats['dominant_class'] == 1
         ]['patient_id'].tolist()
 
-        print(len(class0_patients), len(class1_patients))
 
         np.random.seed(self.seed)
         np.random.shuffle(class0_patients)
@@ -318,9 +315,5 @@ class CBISDDSMDataPrep:
             else: B+=1
         string += f"\nTest Dataset: Total={len(self.df_combined_test)} (Malignant={M} ({M/len(self.df_combined_test)*100:.2f}%), Benign={B} ({B/len(self.df_combined_test)*100:.2f}%))"
         return string
-
-
-
-dataset = CBISDDSMDataPrep(dataset_dir='dataset', n_clients=3, non_iid=True, class_ratio_per_client=[[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]], client_ratio=[0.5, 0.3, 0.2])
 
 # Print image samples

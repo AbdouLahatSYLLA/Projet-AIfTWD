@@ -1,5 +1,8 @@
 import argparse
 import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"       # Cache INFO et WARNING
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0" 
 import sys
 import torch
 import flwr as fl

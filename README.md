@@ -137,3 +137,7 @@ plot_gradcam(model, test_dataset)
 
 * **Metrics connection failed (RPC code 14):**
 * Ignore this error on Kaggle/Colab. It's just the Ray dashboard failing to display stats; the training continues in the background.
+
+
+
+python Partie2/main.py --mode centralized --train_id centralized_resnet50 --model resnet50 --batch_size 32 --epochs 50 --lr 0.001

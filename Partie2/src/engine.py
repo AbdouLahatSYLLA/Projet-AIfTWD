@@ -10,15 +10,13 @@ class Trainer:
         self.device = device
         self.criterion = nn.CrossEntropyLoss()
 
-    def train(self, train_loader, epochs, lr, mode='standard', mu=0.0, dp_settings=None):
+    def train(self, train_loader, test_loader, epochs, lr, mode='standard', mu=0.0, dp_settings=None):
         # Optimiseur
         optimizer = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
 
         # --- AJOUT SCHEDULER ---
         # Divise le LR par 10 toutes les 10 époques pour stabiliser la fin d'entraînement
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
-
-        self.model.train()
 
         # --- Setup Privacy (Si activé) ---
         privacy_engine = None
@@ -39,6 +37,7 @@ class Trainer:
         epoch_loss = 0.0
 
         for epoch in range(epochs):
+            self.model.train()
             batch_losses = []
             disable_tqdm = (epochs == 1)
 
@@ -68,6 +67,10 @@ class Trainer:
                 batch_losses.append(loss.item())
                 if not disable_tqdm:
                     pbar.set_postfix({'loss': f"{loss.item():.4f}"})
+
+            if mode == 'standard':
+                avg_loss, acc = self.evaluate(test_loader)
+                print(f"Loss : {avg_loss:.4f} | Accuracy : {acc*100:.2f}%")
 
             # Mise à jour du LR à la fin de l'époque (sauf en mode DP où c'est parfois géré autrement)
             if mode != 'dp':

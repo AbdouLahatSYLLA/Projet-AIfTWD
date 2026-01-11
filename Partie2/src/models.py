@@ -39,7 +39,7 @@ BasicBlock.forward = safe_basic_block_forward
 Bottleneck.forward = safe_bottleneck_forward
 
 
-def get_model(model_name='resnet18', num_classes=4, use_dp=False, device='cpu'):
+def get_model(model_name='resnet18', num_classes=2, use_dp=False, device='cpu'):
     # 1. Chargement de l'architecture (qui utilise maintenant nos blocs patchés)
     if model_name == 'resnet18':
         model = models.resnet18(weights='IMAGENET1K_V1')

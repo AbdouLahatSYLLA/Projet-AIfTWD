@@ -1,103 +1,135 @@
-# Projet-AIfTWD
-Implementation of a functional minimal federated setup on Cancer Identification using medical imaging data 
+# Projet-AIfTWD: Trustworthy Federated Learning for Cancer Detection
 
-dataset Images need to be downloaded and added to the folder "Partie1/dataset/" next to the csv files
+Implementation of a Trust-worthy Federated Learning setup for Breast Cancer Identification using the **CBIS-DDSM** dataset. This project explores the trade-offs between **Performance**, **Robustness** (Non-IID data), **Privacy** (Differential Privacy), and **Explainability**.
 
-link to download the dataset : https://www.kaggle.com/datasets/awsaf49/cbis-ddsm-breast-cancer-image-dataset?resource=download
+## 📂 1. Dataset Setup
 
-first results :
-```text
-<class 'pandas.core.frame.DataFrame'>
-RangeIndex: 3568 entries, 0 to 3567
-Data columns (total 17 columns):
- #   Column                   Non-Null Count  Dtype  
----  ------                   --------------  -----  
- 0   patient_id               3568 non-null   object 
- 1   breast_density           1696 non-null   float64
- 2   left or right breast     3568 non-null   object 
- 3   image view               3568 non-null   object 
- 4   abnormality id           3568 non-null   int64  
- 5   abnormality type         3568 non-null   object 
- 6   mass shape               1692 non-null   object 
- 7   mass margins             1636 non-null   object 
- 8   assessment               3568 non-null   int64  
- 9   pathology                3568 non-null   object 
- 10  subtlety                 3568 non-null   int64  
- 11  image file path          3568 non-null   object 
- 12  cropped image file path  3568 non-null   object 
- 13  ROI mask file path       3568 non-null   object 
- 14  breast density           1872 non-null   float64
- 15  calc type                1848 non-null   object 
- 16  calc distribution        1433 non-null   object 
-dtypes: float64(2), int64(3), object(12)
-memory usage: 474.0+ KB
-None
-DataFrame Maître créé. Nombre total d'images: 3568
-Distribution des étiquettes:
-target
-0    2111
-1    1457
-Name: count, dtype: int64
-Patients Malignant Dominant: 710
-Patients Benign Dominant: 856
+The dataset images must be downloaded and placed in the folder `Partie2/dataset/` (or wherever your script points to).
 
---- Vérification de la Distribution Non-IID ---
+* **Source:** [Kaggle CBIS-DDSM Dataset](https://www.kaggle.com/datasets/awsaf49/cbis-ddsm-breast-cancer-image-dataset?resource=download)
+* **Preparation:** Run the preparation script to resize images and generate the clean CSV.
 
-Client: client1
-Total images: 1622
-Distribution Malignant (1): 61.22%
+```bash
+# Prepare images (Resize to 224x224 & Indexing)
+python3 Partie2/prepare_dataset.py
 
-Client: client2
-Total images: 1187
-Distribution Malignant (1): 13.48%
-
-Client: client3
-Total images: 759
-Distribution Malignant (1): 40.05%
-
-Process finished with exit code 0
 ```
-#### NB :  "--run_id n" : est le n-eme run. Il est utilisé pour gerer l'emplacement de sauvegarde des logs (stats)
-# Baseline Centralised
 
-````bash 
-# lancer le server
- python3 Partie1/code/main_centralized.py --run_id 0 --epochs 20
-````
+---
 
-# Federated learning
+## 🚀 2. Experiments & Commands
 
-## terminal 1
-````bash 
-# lancer le server
- python3 Partie1/code/server_flower.py --run_id 0 --rounds 15
-````
+All experiments use `main.py`. Ensure your `client_resources` are set to `{'num_cpus': 1, 'num_gpus': 1.0}` to avoid OOM errors on GPUs like P100/T4.
 
-## terminal 2
-````bash 
-# lancer le server
- python3 Partie1/code/client_flower.py --cid client1 --server 127.0.0.1:8080 --run_id 0 --epochs 3
-````
+### 🥇 Phase 1: The "Gold Standard" (Centralized)
 
-## terminal 3
-````bash
-python3 Partie1/code/client_flower.py --cid client2 --server 127.0.0.1:8080 --run_id 0 --epochs 3
-````
+**Goal:** Establish the maximum theoretical performance (Upper Bound) by training on all data without federation.
 
-## terminal 4
+```bash
+python3 Partie2/main.py \
+  --mode centralized \
+  --train_id centralized_resnet50 \
+  --model resnet50 \
+  --batch_size 32 \
+  --epochs 50 \
+  --lr 0.001
 
-````bash
-python3 Partie1/code/client_flower.py --cid client3 --server 127.0.0.1:8080 --run_id 0 --epochs 3
-````
+```
+
+### 🛡️ Phase 2: Robustness (FedAvg vs. FedProx)
+
+**Goal:** Compare performance on **Non-IID data** (Label Skew).
+
+* *Client 0:* Mostly Malignant cases.
+* *Client 1:* Mostly Benign cases (Screening center).
+
+**A. Baseline (FedAvg):** Should struggle with heterogeneity.
+
+```bash
+python3 Partie2/main.py \
+  --mode federated \
+  --train_id fedavg_noniid_baseline \
+  --algo fedavg \
+  --model resnet50 \
+  --batch_size 16 \
+  --epochs 50 \
+  --lr 0.001
+
+```
+
+**B. Robust Solution (FedProx):** Should stabilize convergence using the proximal term ().
+
+```bash
+python3 Partie2/main.py \
+  --mode federated \
+  --train_id fedprox_noniid_robust \
+  --algo fedprox \
+  --mu 0.1 \
+  --model resnet50 \
+  --batch_size 16 \
+  --epochs 50 \
+  --lr 0.001
+
+```
+
+### 🔒 Phase 3: Privacy (Differential Privacy)
+
+**Goal:** Analyze the **Privacy-Utility Trade-off**. We add noise () and clip gradients () to guarantee mathematically proven anonymity.
+
+*Note: Batch size is reduced to 16 to handle the memory overhead of Opacus.*
+
+```bash
+python3 Partie2/main.py \
+  --mode federated \
+  --train_id dp_resnet50_secure \
+  --algo fedavg \
+  --dp \
+  --dp_noise 1.0 \
+  --dp_clip 1.2 \
+  --model resnet50 \
+  --batch_size 16 \
+  --epochs 50 \
+  --lr 0.001
+
+```
+
+---
+
+## 🧠 3. Explainability & Evaluation
+
+Once the models are trained and saved in the `models/` folder, use the provided notebook cells or analysis scripts to generate:
+
+1. **Grad-CAM Heatmaps:** To visualize if the model focuses on the tumor or the background.
+2. **Confusion Matrices:** To check for bias (e.g., False Negatives on Malignant cases).
+
+**Example Code for Grad-CAM:**
+
+```python
+from src.models import get_model
+import torch
+
+# Load best model
+model = get_model(model_name='resnet50', num_classes=4, device='cuda')
+model.load_state_dict(torch.load("models/fedprox_noniid_robust_latest.pth"))
+
+# Run Grad-CAM visualization function (see notebook)
+plot_gradcam(model, test_dataset)
+
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+* **CUDA Out of Memory (OOM):**
+* Reduce `--batch_size` to 16 or 8.
+* Ensure `client_resources={"num_cpus": 1, "num_gpus": 1.0}` is set in `main.py` (do not use 0.5 GPUs).
+* Restart the kernel to clear phantom memory.
 
 
-# Generation de Graphe pour analyse
+* **"Inplace" Error (RuntimeError):**
+* Ensure `src/models.py` includes the "Monkey Patch" for ResNet BasicBlock/Bottleneck.
 
-````bash
-python3 Partie1/analysis/plot_result.py --files Partie1/logs/federated/clients/1/{stats_client1.pkl,stats_client2.pkl,stats_client3.pkl}  --metric both
-````
- 
-Pour la moyenne des runs et peur prendre plus d'arguments par exemple :  python3 Partie1/analysis/plot_result.py --logdir Partie1/logs/federated Partie1/logs/centralized etc --metric accuracy
-````bash
-python3 Partie1/analysis/plot_result.py --logdir Partie1/logs/federated --metric accuracy
-````
+
+* **Metrics connection failed (RPC code 14):**
+* Ignore this error on Kaggle/Colab. It's just the Ray dashboard failing to display stats; the training continues in the background.

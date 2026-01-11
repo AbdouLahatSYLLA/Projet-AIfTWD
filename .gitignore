@@ -4,9 +4,13 @@ __pycache__/
 *$py.class
 
 #the dataset due to high volume
+Partie1/dataset/jpeg
 Partie1/dataset/images
 Partie1/dataset/jpeg.zip
 
+Partie2/dataset/jpeg
+Partie2/dataset/images
+models
 # C extensions
 *.so
 
@@ -87,7 +91,7 @@ profile_default/
 ipython_config.py
 
 # pyenv
-#   For a library or package, you might want to ignore these files since the code is
+#   For a library or package, you might want to ignore these files since the src is
 #   intended to run in multiple environments; otherwise, check them in:
 # .python-version
 
@@ -199,8 +203,8 @@ cython_debug/
 .pypirc
 
 # Cursor
-#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
-#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
+#  Cursor is an AI-powered src editor. `.cursorignore` specifies files/directories to
+#  exclude from AI features like autocomplete and src analysis. Recommended for sensitive data
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore

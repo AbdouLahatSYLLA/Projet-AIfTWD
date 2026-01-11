@@ -8,4 +8,4 @@ subprocess.Popen([PYTHON, "server_flower.py"])
 time.sleep(1)
 
 for cid in range(3):
-    subprocess.Popen([PYTHON, "client_flower.py", str(cid)])
+    subprocess.Popen([PYTHON, "client.py", str(cid)])

@@ -1,0 +1,69 @@
+DataFrame Maître créé. Nombre total d'images: 3568
+Distribution des étiquettes:
+target
+0    2111
+1    1457
+Name: count, dtype: int64
+Patients Malignant Dominant: 710
+Patients Benign Dominant: 856
+
+--- Vérification de la Distribution Non-IID ---
+
+Client: client1
+Total images: 1622
+Distribution Malignant (1): 61.22%
+
+Client: client2
+Total images: 1187
+Distribution Malignant (1): 13.48%
+
+Client: client3
+Total images: 759
+Distribution Malignant (1): 40.05%
+Data imported successfully.
+--- Starting Centralized Baseline ---
+Training on: cuda
+Training on 2854 images. Testing on 714 images.
+Epoch 1: Loss 0.6885 | Acc: 62.65%
+Epoch 2: Loss 0.6196 | Acc: 64.12%
+Epoch 3: Loss 0.5967 | Acc: 66.15%
+Epoch 4: Loss 0.5844 | Acc: 66.61%
+Epoch 5: Loss 0.5654 | Acc: 68.75%
+Epoch 6: Loss 0.5348 | Acc: 70.53%
+Epoch 7: Loss 0.5276 | Acc: 70.81%
+Epoch 8: Loss 0.5058 | Acc: 73.20%
+Epoch 9: Loss 0.4823 | Acc: 75.02%
+Epoch 10: Loss 0.4625 | Acc: 76.03%
+Epoch 11: Loss 0.4505 | Acc: 77.47%
+Epoch 12: Loss 0.4086 | Acc: 79.68%
+Epoch 13: Loss 0.3788 | Acc: 81.81%
+Epoch 14: Loss 0.3342 | Acc: 84.48%
+Epoch 15: Loss 0.3129 | Acc: 85.46%
+Epoch 16: Loss 0.2562 | Acc: 89.03%
+Epoch 17: Loss 0.2392 | Acc: 90.40%
+Epoch 18: Loss 0.2162 | Acc: 91.98%
+Epoch 19: Loss 0.2839 | Acc: 87.84%
+Epoch 20: Loss 0.1507 | Acc: 94.22%
+Epoch 21: Loss 0.1162 | Acc: 95.80%
+Epoch 22: Loss 0.0998 | Acc: 96.78%
+Epoch 23: Loss 0.0678 | Acc: 97.72%
+Epoch 24: Loss 0.2112 | Acc: 92.26%
+Epoch 25: Loss 0.0854 | Acc: 97.27%
+Epoch 26: Loss 0.0575 | Acc: 98.28%
+Epoch 27: Loss 0.0508 | Acc: 98.25%
+Epoch 28: Loss 0.0510 | Acc: 98.39%
+Epoch 29: Loss 0.0497 | Acc: 98.25%
+Epoch 30: Loss 0.0703 | Acc: 97.30%
+Epoch 31: Loss 0.0859 | Acc: 96.60%
+Epoch 32: Loss 0.0787 | Acc: 96.95%
+Epoch 33: Loss 0.0579 | Acc: 97.86%
+Epoch 34: Loss 0.0912 | Acc: 96.43%
+Epoch 35: Loss 0.0520 | Acc: 98.00%
+Epoch 36: Loss 0.0392 | Acc: 98.39%
+Epoch 37: Loss 0.0441 | Acc: 98.07%
+Epoch 38: Loss 0.0470 | Acc: 98.18%
+Epoch 39: Loss 0.0483 | Acc: 98.25%
+Epoch 40: Loss 0.0573 | Acc: 97.44%
+Evaluating final model...
+CENTRALIZED BASELINE RESULT -> Accuracy: 73.95%
+Model saved as 'baseline_centralized.pth'

@@ -21,6 +21,10 @@ python3 Partie2/prepare_dataset.py
 
 All experiments use `main.py`. Ensure your `client_resources` are set to `{'num_cpus': 1, 'num_gpus': 1.0}` to avoid OOM errors on GPUs like P100/T4.
 
+```bash
+pip install -q opacus flwr
+```
+
 ### 🥇 Phase 1: The "Gold Standard" (Centralized)
 
 **Goal:** Establish the maximum theoretical performance (Upper Bound) by training on all data without federation.
@@ -105,7 +109,7 @@ Once the models are trained and saved in the `models/` folder, use the provided 
 **Example Code for Grad-CAM:**
 
 ```python
-from src.models import get_model
+from Partie2.src.models import get_model
 import torch
 
 # Load best model

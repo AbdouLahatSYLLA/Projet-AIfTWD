@@ -16,9 +16,9 @@ class FlowerClient(fl.client.NumPyClient):
         self.mode = mode
         self.mu = mu
         self.dp_settings = dp_settings
-        self.model_name = model_name  # On le stocke
+        self.model_name = model_name
 
-        # On passe model_name à get_model ⬇️
+        # Initialisation du modèle
         self.model = get_model(model_name=self.model_name, num_classes=4, use_dp=(mode == 'dp'), device=device)
         self.trainer = Trainer(self.model, device)
 
@@ -32,20 +32,38 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        server_round = config.get("current_round", 1)
+
+        # Récupération de la config envoyée par le serveur
+        # (ex: mu pour FedProx)
         mu_val = config.get("proximal_mu", self.mu)
 
-        results = self.trainer.train(
+        # On récupère les poids globaux pour le calcul du terme proximal (FedProx)
+        global_params = [torch.tensor(p).to(self.device) for p in parameters] if self.mode == 'fedprox' else None
+
+        # 1. Entraînement
+        # Trainer.train retourne un tuple (loss, acc) si epochs=1
+        loss, accuracy = self.trainer.train(
             self.train_loader,
             epochs=self.epochs,
             lr=self.lr,
             mode=self.mode,
             mu=mu_val,
-            dp_settings=self.dp_settings
+            global_params=global_params  # Important pour FedProx
         )
-        return self.get_parameters(config={}), len(self.train_loader.dataset), {"loss": float(results['loss'])}
+
+        # 2. Renvoi des métriques (Correction ici)
+        # On renvoie loss ET accuracy pour que le serveur puisse (potentiellement) les logger
+        return (
+            self.get_parameters(config={}),
+            len(self.train_loader.dataset),
+            {"loss": float(loss), "accuracy": float(accuracy)}
+        )
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
+
+        # 3. Évaluation
         loss, accuracy = self.trainer.evaluate(self.val_loader)
+
+        # On renvoie bien l'accuracy dans le dictionnaire pour l'agrégation "weighted_average"
         return float(loss), len(self.val_loader.dataset), {"accuracy": float(accuracy)}

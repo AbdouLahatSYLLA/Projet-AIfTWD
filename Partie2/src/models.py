@@ -3,6 +3,11 @@ from torchvision import models
 from torchvision.models.resnet import BasicBlock, Bottleneck
 from opacus.validators import ModuleValidator
 
+
+# --- MONKEY PATCHING : CORRECTION DU BUG IN-PLACE ---
+# On remplace la méthode 'forward' officielle de ResNet par la nôtre
+# qui utilise 'out = out + identity' au lieu de 'out += identity'.
+
 def safe_basic_block_forward(self, x):
     identity = x
     out = self.conv1(x)
@@ -12,7 +17,7 @@ def safe_basic_block_forward(self, x):
     out = self.bn2(out)
     if self.downsample is not None:
         identity = self.downsample(x)
-    out = out + identity
+    out = out + identity  # <--- LE FIX EST ICI (Plus de +=)
     out = self.relu(out)
     return out
 
@@ -29,7 +34,7 @@ def safe_bottleneck_forward(self, x):
     out = self.bn3(out)
     if self.downsample is not None:
         identity = self.downsample(x)
-    out = out + identity
+    out = out + identity  # <--- LE FIX EST ICI (Plus de +=)
     out = self.relu(out)
     return out
 
@@ -39,7 +44,9 @@ BasicBlock.forward = safe_basic_block_forward
 Bottleneck.forward = safe_bottleneck_forward
 
 
-def get_model(model_name='resnet18', num_classes=2, use_dp=False, device='cpu'):
+# --- FIN DU PATCH ---
+
+def get_model(model_name='resnet18', num_classes=4, use_dp=False, device='cpu'):
     # 1. Chargement de l'architecture (qui utilise maintenant nos blocs patchés)
     if model_name == 'resnet18':
         model = models.resnet18(weights='IMAGENET1K_V1')
@@ -50,16 +57,16 @@ def get_model(model_name='resnet18', num_classes=2, use_dp=False, device='cpu'):
     else:
         raise ValueError(f"Modèle inconnu : {model_name}")
 
-    # Adaptation de la dernière couche
+    # 2. Adaptation de la dernière couche
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, num_classes)
 
-    # Désactivation des ReLU inplace (Double sécurité)
+    # 3. Désactivation des ReLU inplace (Double sécurité)
     for module in model.modules():
         if isinstance(module, nn.ReLU):
             module.inplace = False
 
-    # Adaptation Opacus si nécessaire
+    # 4. Adaptation Opacus si nécessaire
     if use_dp:
         model = ModuleValidator.fix(model)
         # On revérifie les ReLU après le passage du Validator

@@ -6,14 +6,13 @@ import sys
 
 def load_data_and_partition():
     """
-    Charge le dataset propre et génère des partitions Non-IID basées sur les patients.
-    Garantit l'absence de fuite de données entre clients (split par patient_id).
+    Charge le dataset, respecte le split Train/Test officiel,
+    et génère des partitions Non-IID pour les clients en gardant les 4 classes.
     """
     # 1. Chargement du CSV
-    # On cherche le CSV généré par prepare_dataset.py
     POSSIBLE_PATHS = [
         "Partie2/dataset/cleaned_dataset.csv",
-        "../dataset/cleaned_dataset.csv",
+        "dataset/cleaned_dataset.csv",
         "/kaggle/working/dataset/cleaned_dataset.csv"
     ]
 
@@ -30,33 +29,40 @@ def load_data_and_partition():
     print(f"📂 Chargement des données depuis {CLEAN_CSV}...")
     df = pd.read_csv(CLEAN_CSV)
 
-    # 2. Création de la colonne binaire pour l'analyse Non-IID
-    # Classes : 0=Calc-Ben, 1=Calc-Mal, 2=Mass-Ben, 3=Mass-Mal
-    # Is Malignant = 1 ou 3
-    df['is_malignant'] = df['target'].isin([1, 3]).astype(int)
+    # 2. SÉPARATION STRICTE TRAIN / TEST OFFICIELLE
+    # On s'assure de ne jamais toucher au Test Set pour l'entraînement (Centralisé ou Fédéré)
+    if 'split' in df.columns:
+        print("ℹ️ Colonne 'split' détectée : Séparation stricte Train/Test.")
+        df_train = df[df['split'] == 'train'].copy()
+        df_test_official = df[df['split'] == 'test'].copy()
+    else:
+        print("⚠️ Pas de colonne 'split'. Utilisation de tout le dataset (Risque de Leakage).")
+        df_train = df.copy()
+        df_test_official = pd.DataFrame()
 
-    # 3. Partitionnement logique par Patient
-    # On regroupe par patient pour déterminer son profil pathologique dominant
-    patient_profiles = df.groupby('patient_id')['is_malignant'].agg(['mean', 'count']).reset_index()
+    print(f"📊 Dataset Global : {len(df)} images")
+    print(f"   ↳ Train Set (Distribué aux Clients) : {len(df_train)} images")
+    print(f"   ↳ Test Set (Réservé au Serveur/Eval): {len(df_test_official)} images")
 
-    # Définition des profils patients :
-    # - "Cancer Patient" : A au moins une image maligne
-    # - "Benign Patient" : N'a que des images bénignes
+    # 3. Création d'une colonne helper pour le tri Non-IID
+    # Les classes sont : 0=Calc-Ben, 1=Calc-Mal, 2=Mass-Ben, 3=Mass-Mal
+    # On regroupe les Malins (1,3) vs Bénins (0,2) pour simuler le biais Hôpital vs Dépistage.
+    df_train['is_malignant'] = df_train['target'].isin([1, 3]).astype(int)
+
+    # 4. Partitionnement logique par Patient (Anti-Leakage)
+    # On garantit qu'un patient est entierement chez un seul client
+    patient_profiles = df_train.groupby('patient_id')['is_malignant'].agg(['mean', 'count']).reset_index()
+
+    # Un patient est "Malin" s'il a au moins une image maligne, "Bénin" sinon
     malignant_patients = patient_profiles[patient_profiles['mean'] > 0]['patient_id'].tolist()
     benign_patients = patient_profiles[patient_profiles['mean'] == 0]['patient_id'].tolist()
 
-    print(f"📊 Total Patients : {len(patient_profiles)}")
-    print(f"   🤒 Patients avec pathologie maligne : {len(malignant_patients)}")
-    print(f"   ✅ Patients sains/bénins : {len(benign_patients)}")
-
-    # 4. Attribution Non-IID (Simulation réaliste)
+    # 5. Attribution Non-IID (Simulation réaliste)
     np.random.seed(42)
 
-    # Client 0 : "Centre d'Oncologie Spécialisé"
-    # -> Reçoit une très grosse majorité de cas malins (Label Skew fort)
-    # Prend 70% des patients malins disponibles
+    # --- Client 0 : Oncologie (Cible: Classes 1 & 3) ---
+    # Reçoit 70% des patients malades, et seulement 5% des sains
     n_c0_mal = int(0.7 * len(malignant_patients))
-    # Prend très peu de bénins (5%)
     n_c0_ben = int(0.05 * len(benign_patients))
 
     c0_patients = (
@@ -64,15 +70,12 @@ def load_data_and_partition():
             np.random.choice(benign_patients, n_c0_ben, replace=False).tolist()
     )
 
-    # Mise à jour des listes de patients restants
     remaining_mal = list(set(malignant_patients) - set(c0_patients))
     remaining_ben = list(set(benign_patients) - set(c0_patients))
 
-    # Client 1 : "Centre de Dépistage de Routine"
-    # -> Reçoit une énorme majorité de cas bénins
-    # Prend 80% des bénins restants
+    # --- Client 1 : Dépistage (Cible: Classes 0 & 2) ---
+    # Reçoit 80% des patients sains restants
     n_c1_ben = int(0.8 * len(remaining_ben))
-    # Prend peu de malins (10% des restants)
     n_c1_mal = int(0.1 * len(remaining_mal))
 
     c1_patients = (
@@ -80,41 +83,44 @@ def load_data_and_partition():
             np.random.choice(remaining_mal, n_c1_mal, replace=False).tolist()
     )
 
-    # Client 2 : "Hôpital Généraliste"
-    # -> Reçoit tout ce qui reste (mixte mais souvent déséquilibré)
+    # --- Client 2 : Généraliste (Mixte) ---
+    # Prend tout ce qui reste
     c2_patients = list(set(remaining_ben) - set(c1_patients)) + list(set(remaining_mal) - set(c1_patients))
 
-    # 5. Construction des DataFrames finaux
+    # 6. Construction des DataFrames Clients (On garde les cibles 0-3 intactes)
     clients = {}
-    clients['0'] = df[df['patient_id'].isin(c0_patients)].copy()
-    clients['1'] = df[df['patient_id'].isin(c1_patients)].copy()
-    clients['2'] = df[df['patient_id'].isin(c2_patients)].copy()
+    clients['0'] = df_train[df_train['patient_id'].isin(c0_patients)].copy()
+    clients['1'] = df_train[df_train['patient_id'].isin(c1_patients)].copy()
+    clients['2'] = df_train[df_train['patient_id'].isin(c2_patients)].copy()
 
-    # 6. Rapport de distribution (Pour vérifier le Non-IID)
-    print("\n--- Distribution Non-IID ---")
+    # 7. Rapport de distribution détaillé (4 Classes)
+    print("\n--- Distribution Non-IID (Train Set - 4 Classes) ---")
+    classes_name = {0: "Calc-Ben", 1: "Calc-Mal", 2: "Mass-Ben", 3: "Mass-Mal"}
 
     for cid, cdf in clients.items():
         total = len(cdf)
-        n_mal = cdf['is_malignant'].sum()
-        ratio = n_mal / total if total > 0 else 0
+        # Compte par classe (0, 1, 2, 3)
+        counts = cdf['target'].value_counts().sort_index()
 
         if cid == '0':
-            label = "Oncologie (Cible: Malin)"
+            label = "Oncologie"
         elif cid == '1':
-            label = "Dépistage (Cible: Bénin)"
+            label = "Dépistage"
         else:
-            label = "Généraliste (Reste)"
+            label = "Généraliste"
 
-        print(f"Client {cid} [{label}]:")
-        print(f"   🖼️ {total} images")
-        print(f"   📈 {ratio * 100:.1f}% Malignantes ({n_mal} img)")
+        print(f"Client {cid} [{label}] - Total: {total}")
+        for cls, name in classes_name.items():
+            count = counts.get(cls, 0)
+            percentage = (count / total) * 100 if total > 0 else 0
+            # Affiche une barre visuelle si le pourcentage est élevé
+            bar = "█" * int(percentage / 10)
+            print(f"   - {name} ({cls}): {count:3d} ({percentage:5.1f}%) {bar}")
 
-    return df, clients
+    # On retourne uniquement df_train et les partitions clients
+    # Le Test Set est écarté ici, il pourra être chargé séparément pour l'évaluation finale si besoin
+    return df_train, clients
 
 
 if __name__ == "__main__":
-    # Test rapide si lancé directement
-    try:
-        load_data_and_partition()
-    except:
-        pass
+    load_data_and_partition()

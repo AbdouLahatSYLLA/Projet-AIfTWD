@@ -11,8 +11,10 @@ OUTPUT_DIR = "dataset"
 OUTPUT_IMAGES_DIR = os.path.join(OUTPUT_DIR, "images")
 OUTPUT_CSV = os.path.join(OUTPUT_DIR, "cleaned_dataset.csv")
 
-# Chemins Kaggle Input possibles (à adapter selon l'environnement)
+# Chemins Kaggle Input ou local possibles
 POSSIBLE_ROOTS = [
+    '/kaggle/input/cbis-ddsm-breast-cancer-image-dataset',
+    '/kaggle/input/cbis-ddsm',
     'dataset',
     '.'
 ]
@@ -31,48 +33,61 @@ def prepare():
         print("❌ Dataset input introuvable.")
         return
 
+    # Nettoyage dossier sortie
+    if os.path.exists(OUTPUT_DIR):
+        shutil.rmtree(OUTPUT_DIR)
+    os.makedirs(OUTPUT_IMAGES_DIR, exist_ok=True)
+
     print(f"📂 Lecture des données depuis {root_dir}...")
 
     # Chargement CSVs
     csv_dir = os.path.join(root_dir, 'csv')
-
     try:
         dfs = []
-        # On charge les descriptions de cas (Mass et Calc)
-        for f in ['mass_case_description_train_set.csv', 'mass_case_description_test_set.csv',
-                  'calc_case_description_train_set.csv', 'calc_case_description_test_set.csv']:
-            p = os.path.join(csv_dir, f)
-            if os.path.exists(p):
-                df = pd.read_csv(p)
-                # Ajout du type d'anomalie
-                df['abnormality_type'] = 'Mass' if 'mass' in f else 'Calc'
-                dfs.append(df)
+        # On définit explicitement quels fichiers sont TRAIN et lesquels sont TEST
+        files_map = {
+            'train': ['mass_case_description_train_set.csv', 'calc_case_description_train_set.csv'],
+            'test': ['mass_case_description_test_set.csv', 'calc_case_description_test_set.csv']
+        }
 
-        if not dfs:
+        found_any = False
+        for split_type, filenames in files_map.items():
+            for f in filenames:
+                p = os.path.join(csv_dir, f)
+                if os.path.exists(p):
+                    df = pd.read_csv(p)
+                    # --- CORRECTION ICI : ON TAGUE L'ORIGINE ---
+                    df['abnormality_type'] = 'Mass' if 'mass' in f else 'Calc'
+                    df['split'] = split_type  # 'train' ou 'test'
+                    dfs.append(df)
+                    found_any = True
+
+        if not found_any:
             print("❌ Aucun CSV trouvé !")
             return
 
         df_full = pd.concat(dfs, ignore_index=True)
         print(f"📊 Total entrées brutes : {len(df_full)}")
+        print(f"   - Train set : {len(df_full[df_full['split'] == 'train'])}")
+        print(f"   - Test set  : {len(df_full[df_full['split'] == 'test'])}")
+
     except Exception as e:
         print(f"❌ Erreur lecture CSV: {e}")
         return
 
-    # --- INDEXATION DES IMAGES SOURCES ---
+    # --- INDEXATION ROBUSTE ---
     print("🔍 Indexation des fichiers JPEG sources...")
     image_map = {}
     count_found = 0
 
-    # On cherche dans le dossier 'images'
-    search_dir = os.path.join(root_dir, 'images')
+    search_dir = os.path.join(root_dir, 'jpeg')
     if not os.path.exists(search_dir):
-        print(f"⚠️ Dossier 'images' introuvable dans {root_dir}")
-        return
+        print("⚠️ Dossier 'jpeg' introuvable, recherche recursive à la racine...")
+        search_dir = root_dir
 
-    # On indexe chaque fichier par le nom de son dossier parent (UID unique dans DDSM)
     for root, _, files in os.walk(search_dir):
         for file in files:
-            if file.lower().endswith(('.jpg', '.images')):
+            if file.lower().endswith(('.jpg', '.jpeg')):
                 folder_uid = os.path.basename(root)
                 image_map[folder_uid] = os.path.join(root, file)
                 count_found += 1
@@ -81,44 +96,30 @@ def prepare():
 
     # --- TRAITEMENT ---
     valid_rows = []
+    print("🚀 Traitement et redimensionnement...")
 
-    print("🚀 Traitement et redimensionnement des images (FULL MAMMOGRAMS)...")
+    matches = 0
+    failures = 0
 
     for idx, row in tqdm(df_full.iterrows(), total=len(df_full)):
 
-        # --- CHANGEMENT V2 : ON FORCE L'IMAGE ENTIÈRE ---
-        # On ignore 'cropped image file path' et 'ROI mask file path'
         raw_path = str(row['image file path'])
-
-        # Le chemin dans le CSV ressemble à :
-        # "Mass-Training_P_00001_LEFT_CC/1.3.6.1.4.1.9590.../1.3.6.1.4.1.9590.../000000.dcm"
-        # On doit trouver quel segment correspond à un dossier physique
+        raw_path_clean = raw_path.strip().replace('\n', '').replace('\r', '')
 
         real_path = None
-        parts = raw_path.split('/')
+        parts = [p.strip() for p in raw_path_clean.split('/')]
 
-        # On cherche l'UID dans les parties du chemin
         for part in parts:
             if part in image_map:
                 real_path = image_map[part]
                 break
 
-        # Si on ne trouve pas directement, on essaie de nettoyer les caractères cachés (souvent \n dans les CSV)
-        if not real_path:
-            for part in parts:
-                clean_part = part.strip()
-                if clean_part in image_map:
-                    real_path = image_map[clean_part]
-                    break
-
         if real_path:
             try:
-                # Ouverture et Resize
                 with Image.open(real_path) as img:
                     img = img.convert('RGB')
                     img = img.resize(TARGET_SIZE)
 
-                    # Nouveau nom unique
                     safe_view = str(row['image view']).strip().replace(' ', '_')
                     safe_side = str(row['left or right breast']).strip()
                     pat_id = str(row['patient_id']).strip()
@@ -128,44 +129,42 @@ def prepare():
 
                     img.save(save_path, quality=85)
 
-                    # Mise à jour des infos pour le nouveau CSV
                     row['local_path'] = save_path
                     valid_rows.append(row)
+                    matches += 1
             except Exception as e:
-                # print(f"Erreur image {real_path}: {e}")
                 pass
+        else:
+            failures += 1
+
+    print(f"\n📊 Bilan traitement :")
+    print(f"   ✅ Images matchées et traitées : {matches}")
+    print(f"   ❌ Images non trouvées : {failures}")
 
     if not valid_rows:
-        print("❌ CRITIQUE : Aucune image traitée. Vérifiez les chemins.")
+        print("❌ CRITIQUE : Aucune image traitée.")
         return
 
-    # --- GÉNÉRATION DU CSV FINAL ---
+    # --- GÉNÉRATION CSV FINAL ---
     df_clean = pd.DataFrame(valid_rows)
 
-    # Création de la cible (Target) 0-3
     def get_label(row):
-        # Pathology: BENIGN, MALIGNANT, BENIGN_WITHOUT_CALLBACK
         pathology = str(row['pathology']).upper()
         is_mass = row['abnormality_type'] == 'Mass'
-
         is_malignant = 'MALIGNANT' in pathology
 
-        if not is_mass and not is_malignant: return 0  # Calc Benign
-        if not is_mass and is_malignant: return 1  # Calc Malignant
-        if is_mass and not is_malignant: return 2  # Mass Benign
-        if is_mass and is_malignant: return 3  # Mass Malignant
+        if not is_mass and not is_malignant: return 0
+        if not is_mass and is_malignant: return 1
+        if is_mass and not is_malignant: return 2
+        if is_mass and is_malignant: return 3
         return 0
 
     df_clean['target'] = df_clean.apply(get_label, axis=1)
-
-    # Sauvegarde
     df_clean.to_csv(OUTPUT_CSV, index=False)
 
-    print(f"\n✅ Dataset généré avec succès !")
-    print(f"   📂 Images : {OUTPUT_IMAGES_DIR}")
-    print(f"   📄 CSV : {OUTPUT_CSV}")
-    print(f"   🖼️ Nombre d'images : {len(df_clean)}")
-    print(f"   📊 Distribution des classes :\n{df_clean['target'].value_counts().sort_index()}")
+    print(f"\n✅ Dataset prêt !")
+    print(f"   📄 {OUTPUT_CSV}")
+    print(f"   👉 Colonne 'split' ajoutée : {df_clean['split'].unique()}")
 
 
 if __name__ == "__main__":

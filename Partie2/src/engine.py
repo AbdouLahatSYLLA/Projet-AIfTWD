@@ -1,95 +1,102 @@
 import torch
 import torch.nn as nn
+from tqdm import tqdm
+import numpy as np
 from opacus import PrivacyEngine
-from tqdm.auto import tqdm
 
 
 class Trainer:
-    def __init__(self, model, device='cpu'):
+    def __init__(self, model, device, dp_settings=None):
         self.model = model
         self.device = device
         self.criterion = nn.CrossEntropyLoss()
+        # Optimiseur (SGD est souvent préféré pour DP, Adam pour la perf standard)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        self.dp_settings = dp_settings
 
-    def train(self, train_loader, test_loader, epochs, lr, mode='standard', mu=0.0, dp_settings=None):
-        # Optimiseur
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
+    def train(self, train_loader, epochs, lr, mode='standard', mu=0.0, global_params=None):
+        """
+        Entraîne le modèle et retourne l'historique (loss, accuracy).
+        """
+        # Mise à jour du Learning Rate
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr
 
-        # --- AJOUT SCHEDULER ---
-        # Divise le LR par 10 toutes les 10 époques pour stabiliser la fin d'entraînement
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
-
-        # --- Setup Privacy (Si activé) ---
-        privacy_engine = None
-        if mode == 'dp' and dp_settings:
+        # Gestion Differential Privacy
+        if mode == 'dp' and self.dp_settings:
             privacy_engine = PrivacyEngine()
-            # Opacus ne supporte pas toujours bien les schedulers, on fait attention
-            self.model, optimizer, train_loader = privacy_engine.make_private(
-                module=self.model, optimizer=optimizer, data_loader=train_loader,
-                noise_multiplier=dp_settings.get('noise', 1.0),
-                max_grad_norm=dp_settings.get('clip', 1.2),
+            self.model, self.optimizer, train_loader = privacy_engine.make_private(
+                module=self.model,
+                optimizer=self.optimizer,
+                data_loader=train_loader,
+                noise_multiplier=self.dp_settings['noise'],
+                max_grad_norm=self.dp_settings['clip'],
             )
 
-        # --- Setup FedProx ---
-        global_params = None
-        if mode == 'fedprox' and mu > 0:
-            global_params = [p.clone().detach() for p in self.model.parameters()]
+        # Historique pour les courbes
+        history = {'loss': [], 'accuracy': []}
 
-        epoch_loss = 0.0
+        self.model.train()
 
         for epoch in range(epochs):
-            self.model.train()
-            batch_losses = []
-            disable_tqdm = (epochs == 1)
+            running_loss = 0.0
+            correct = 0
+            total = 0
 
-            # On affiche le LR courant dans la barre
-            current_lr = optimizer.param_groups[0]['lr']
-            desc = f"Ep {epoch + 1} [LR={current_lr:.1e}]"
+            # Barre de progression si centralisé (plusieurs epochs), sinon silencieux pour fédéré
+            iterator = train_loader
+            if epochs > 1:
+                iterator = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}")
 
-            pbar = tqdm(train_loader, desc=desc, unit="batch", disable=disable_tqdm)
-
-            for images, labels in pbar:
+            for images, labels in iterator:
                 images, labels = images.to(self.device), labels.to(self.device)
-                optimizer.zero_grad()
 
+                self.optimizer.zero_grad()
                 outputs = self.model(images)
                 loss = self.criterion(outputs, labels)
 
-                # FedProx Term
-                if mode == 'fedprox' and mu > 0:
+                # Terme Proximal (FedProx)
+                if mode == 'fedprox' and global_params is not None:
                     prox_term = 0.0
-                    for w, w_t in zip(self.model.parameters(), global_params):
-                        prox_term += (w - w_t).norm(2) ** 2
+                    for param, global_param in zip(self.model.parameters(), global_params):
+                        prox_term += (param - torch.as_tensor(global_param).to(self.device)).norm(2)
                     loss += (mu / 2) * prox_term
 
                 loss.backward()
-                optimizer.step()
+                self.optimizer.step()
 
-                batch_losses.append(loss.item())
-                if not disable_tqdm:
-                    pbar.set_postfix({'loss': f"{loss.item():.4f}"})
+                running_loss += loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
 
-            if mode == 'standard':
-                avg_loss, acc = self.evaluate(test_loader)
-                print(f"Loss : {avg_loss:.4f} | Accuracy : {acc*100:.2f}%")
+            epoch_loss = running_loss / len(train_loader)
+            epoch_acc = correct / total
 
-            # Mise à jour du LR à la fin de l'époque (sauf en mode DP où c'est parfois géré autrement)
-            if mode != 'dp':
-                scheduler.step()
+            history['loss'].append(epoch_loss)
+            history['accuracy'].append(epoch_acc)
 
-            if batch_losses:
-                epoch_loss = sum(batch_losses) / len(batch_losses)
+            if epochs > 1:
+                print(f"   Loss: {epoch_loss:.4f} | Acc: {epoch_acc:.4f}")
 
-        results = {"loss": epoch_loss}
-        if privacy_engine:
-            results["epsilon"] = privacy_engine.get_epsilon(delta=1e-5)
-        torch.cuda.empty_cache()
-        return results
+        # Si on est en DP, on 'nettoie' le modèle pour qu'il redevienne compatible PyTorch standard
+        if mode == 'dp':
+            self.model = self.model._module
 
-    def evaluate(self, val_loader):
+        # En mode Fédéré (1 epoch), on retourne la dernière valeur
+        if epochs == 1:
+            return history['loss'][-1], history['accuracy'][-1]
+
+        # En mode Centralisé, on retourne tout l'historique
+        return history
+
+    def evaluate(self, test_loader):
         self.model.eval()
-        correct, total, loss = 0, 0, 0.0
+        loss = 0.0
+        correct = 0
+        total = 0
         with torch.no_grad():
-            for images, labels in val_loader:
+            for images, labels in test_loader:
                 images, labels = images.to(self.device), labels.to(self.device)
                 outputs = self.model(images)
                 loss += self.criterion(outputs, labels).item()
@@ -97,6 +104,4 @@ class Trainer:
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
 
-        acc = correct / total if total > 0 else 0.0
-        avg_loss = loss / len(val_loader) if len(val_loader) > 0 else 0.0
-        return avg_loss, acc
+        return loss / len(test_loader), correct / total

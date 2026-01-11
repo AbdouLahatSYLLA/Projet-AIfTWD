@@ -196,12 +196,14 @@ def run_federated(args, client_dfs, device):
             on_fit_config_fn=fit_config, evaluate_metrics_aggregation_fn=weighted_average
         )
 
+    use_gpu_resource = 1.0 if torch.cuda.is_available() else 0.0
+    print(f"🖥️ Configuration Ressources Ray : {use_gpu_resource} GPU par client")
     fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=3,
         config=fl.server.ServerConfig(num_rounds=args.epochs),
         strategy=strategy,
-        client_resources={"num_cpus": 1, "num_gpus": 1.0}
+        client_resources={"num_cpus": 1, "num_gpus": use_gpu_resource}
     )
 
 

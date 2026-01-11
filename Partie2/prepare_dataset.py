@@ -33,10 +33,7 @@ def prepare():
         print("❌ Dataset input introuvable.")
         return
 
-    # Nettoyage dossier sortie
-    if os.path.exists(OUTPUT_DIR):
-        shutil.rmtree(OUTPUT_DIR)
-    os.makedirs(OUTPUT_IMAGES_DIR, exist_ok=True)
+
 
     print(f"📂 Lecture des données depuis {root_dir}...")
 
